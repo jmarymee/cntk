@@ -1,0 +1,1 @@
+cntk configFile=.\Config\uciadult.cntk currentDirectory=Data

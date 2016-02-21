@@ -1,0 +1,142 @@
+# sample configuration file for CNTK 
+command=AICTrain:AICOutput:dumpNodeInfo:AICTest
+
+#global parameters, all commands use these values unless overridden at a higher level
+precision=float
+deviceId=-1
+
+#Dir Config
+RootDir = ".."
+
+ConfigDir = "$RootDir$/Config"
+DataDir = "$RootDir$/Data"
+OutputDir = "$RootDir$/Output"
+ModelDir = "$OutputDir$/Models"
+
+#commands used will be appended the stderr name to create a path 
+# uncomment the following line to write logs to a file
+stderr=$OutputDir$/AICOutput
+traceLevel=1 # larger values mean more output
+#ndlMacros=$ConfigDir$\DefaultMacros.ndl
+modelPath=$ModelDir$\uciadult.dnn
+labelMappingFile=$DataDir$\mapping.txt
+
+AICTrain=[
+    action=train
+    minibatchSize=25
+    epochSize=0
+
+    NDLNetworkBuilder = [
+
+        run = ndlLR
+
+        ndlLR = [
+        # sample and label dimensions
+        SDim = 68
+        LDim = 1
+
+        features = Input(SDim,1)
+        labels = Input(LDim,1)
+
+        # parameters to learn
+        B = Parameter(LDim,1)
+        W = Parameter(LDim, SDim)
+
+        # operations
+        t = Times(W, features)
+        z = Plus(t, B)
+        s = Sigmoid(z)
+
+        LR = Logistic(labels, s)
+        EP = SquareError(labels, s)
+
+        # root nodes
+        FeatureNodes = (features)
+        LabelNodes = (labels)
+        CriteriaNodes = (LR)
+        EvalNodes = (EP)
+        OutputNodes = (s)
+        ]
+    ]
+
+    SGD=[
+        #modelPath - moved to root level to share with mnistTest
+        learningRatesPerMB=0.1
+        #learningRatesPerSample=0.1
+        maxEpochs=50
+    ]
+    reader=[
+        readerType="UCIFastReader"
+        file=$DataDir$\aic-train.csv    
+        miniBatchMode = "partial"
+        randomize = "auto"
+        customDelimiter = ","
+        verbosity = 1  
+        features=[
+            dim=68
+            start=0        
+        ]
+        labels=[
+            dim=1
+            start=68
+            labelDim=2
+             labelType="regression"
+            labelMappingFile = $DataDir$\mapping.txt
+        ]
+    ]
+]
+
+AICTest=[
+    action=test
+    
+    reader=[
+        readerType="UCIFastReader"
+        file=$DataDir$\aic-test.csv    
+        miniBatchMode = "partial"
+        randomize = "none"
+        customDelimiter = ","
+        verbosity = 1  
+        features=[
+            dim=68
+            start=0        
+        ]
+        labels=[
+            dim=1
+            start=68
+            labelDim=2
+             labelType="regression"
+            labelMappingFile = $DataDir$\mapping.txt
+        ]
+    ]
+]
+
+AICOutput=[
+    action=write
+    
+        reader=[
+        readerType="UCIFastReader"
+        file=$DataDir$\aic-test.csv    
+        miniBatchMode = "partial"
+        randomize = "none"
+        customDelimiter = ","
+        verbosity = 1  
+        features=[
+            dim=68
+            start=0        
+        ]
+        labels=[
+            dim=1
+            start=68
+            labelDim=2
+             labelType="regression"
+            labelMappingFile = $DataDir$\mapping.txt
+        ]
+    ]
+    
+    outputPath= "$OutputDir$/AICOutput"
+]
+
+    dumpNodeInfo=[
+        action=dumpnode
+        printValues=true
+    ]
